@@ -21,6 +21,8 @@ DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.yml")
 if [[ -f "${WARDEN_HOME_DIR}/.env" ]]; then
     # Check DNSMasq
     eval "$(grep "^WARDEN_DNSMASQ_ENABLE" "${WARDEN_HOME_DIR}/.env")"
+    # Check DNS over HTTPS
+    eval "$(grep "^WARDEN_DNS_OVER_HTTPS_ENABLE" "${WARDEN_HOME_DIR}/.env")"
     # Check Portainer
     eval "$(grep "^WARDEN_PORTAINER_ENABLE" "${WARDEN_HOME_DIR}/.env")"
 
@@ -34,12 +36,24 @@ fi
 export WARDEN_DOCKER_SOCK="${WARDEN_DOCKER_SOCK:-/var/run/docker.sock}"
 DOCKER_COMPOSE_ARGS+=("-f")
 DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.mailpit.yml")
+DOCKER_COMPOSE_ARGS+=("-f")
+DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.pki.yml")
 
 ## add dnsmasq docker-compose
 WARDEN_DNSMASQ_ENABLE="${WARDEN_DNSMASQ_ENABLE:-1}"
 if [[ "$WARDEN_DNSMASQ_ENABLE" == "1" ]]; then
     DOCKER_COMPOSE_ARGS+=("-f")
     DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.dnsmasq.yml")
+fi
+
+WARDEN_DNS_OVER_HTTPS_ENABLE="${WARDEN_DNS_OVER_HTTPS_ENABLE:-0}"
+if [[ "$WARDEN_DNS_OVER_HTTPS_ENABLE" == "1" ]]; then
+    if [[ "$WARDEN_DNSMASQ_ENABLE" != "1" ]]; then
+        warning "WARDEN_DNS_OVER_HTTPS_ENABLE requires WARDEN_DNSMASQ_ENABLE=1; skipping DNS-over-HTTPS service"
+    else
+        DOCKER_COMPOSE_ARGS+=("-f")
+        DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.dns-over-https.yml")
+    fi
 fi
 
 WARDEN_PORTAINER_ENABLE="${WARDEN_PORTAINER_ENABLE:-0}"
@@ -106,6 +120,27 @@ if [[ "${WARDEN_PARAMS[0]}" == "up" ]]; then
 		      keyFile: /etc/ssl/certs/warden/${cert}.key.pem
 		EOF
     done
+
+    mkdir -p "${WARDEN_HOME_DIR}/etc/pki-public"
+    cp "${WARDEN_SSL_DIR}/rootca/certs/ca.cert.pem" "${WARDEN_HOME_DIR}/etc/pki-public/ca.cert.pem"
+    cp "${WARDEN_SSL_DIR}/rootca/crl/ca.crl.pem" "${WARDEN_HOME_DIR}/etc/pki-public/ca.crl.pem"
+
+    cat >> "${WARDEN_HOME_DIR}/etc/traefik/dynamic.yml" <<-'EOT'
+		http:
+		  routers:
+		    http-to-https:
+		      entryPoints:
+		        - http
+		      rule: HostRegexp(`{host:.+}`)
+		      middlewares:
+		        - redirect-to-https
+		      service: noop@internal
+		  middlewares:
+		    redirect-to-https:
+		      redirectScheme:
+		        scheme: https
+		        permanent: true
+	EOT
 
     ## always execute svc up using --detach mode
     if ! (containsElement "-d" "$@" || containsElement "--detach" "$@"); then

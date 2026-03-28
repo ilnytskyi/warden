@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 [[ ! ${WARDEN_DIR} ]] && >&2 echo -e "\033[31mThis script is not intended to be run directly!\033[0m" && exit 1
 
+source "${WARDEN_DIR}/utils/install.sh"
+
 ## Disable immediate exit on failure (set in main warden bin), we use this to detect whether docker is running and continue.
 set +e
 
@@ -42,6 +44,22 @@ echo
 echo -e "\033[32mWarden global .env:\033[0m"
 cat ${WARDEN_HOME_DIR}/.env
 echo
+
+if hasWindowsCertificateBridge; then
+    echo -e "\033[32mWindows Warden root certificate store state:\033[0m"
+    windows_store_state="$(getWindowsRootCaStoreState "${WARDEN_HOME_DIR}/ssl/rootca/certs/ca.cert.pem")"
+    case "${windows_store_state}" in
+        *"LocalMachine=present"* ) echo -e "\033[33mWindows LocalMachine Root: present\033[0m" ;;
+        *"LocalMachine=missing"* ) echo -e "\033[33mWindows LocalMachine Root: missing\033[0m" ;;
+        *"LocalMachine=unreadable"* ) echo -e "\033[33mWindows LocalMachine Root: unreadable\033[0m" ;;
+    esac
+    case "${windows_store_state}" in
+        *"CurrentUser=present"* ) echo -e "\033[33mWindows CurrentUser Root: present\033[0m" ;;
+        *"CurrentUser=missing"* ) echo -e "\033[33mWindows CurrentUser Root: missing\033[0m" ;;
+        *"CurrentUser=unreadable"* ) echo -e "\033[33mWindows CurrentUser Root: unreadable\033[0m" ;;
+    esac
+    echo
+fi
 
 echo -e "\033[32mWarden service override via Docker compose file:\033[0m"
 if [[ -f ${WARDEN_HOME_DIR}/docker-compose.yml ]]; then

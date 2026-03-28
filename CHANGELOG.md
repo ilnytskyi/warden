@@ -7,6 +7,11 @@
 * Add support to dynamically connect peered services based on enabled status ([#892](https://github.com/wardenenv/warden/issues/892) by @bap14, [#919](https://github.com/wardenenv/warden/issues/919) by @xinsodev)
 * Fix WARDEN_DOCKER_SOCK error running `warden sign-certificate` ([#907](https://github.com/wardenenv/warden/issues/907) by @bap14)
 * Automatically trust the Warden root CA in the Windows CurrentUser Root store when `warden install` is run inside WSL, allowing Windows browsers to trust local Warden certificates without manual import
+* `warden install` now attempts to trust the Warden root CA in the Windows LocalMachine Root store first, falls back to CurrentUser Root when elevation or policy prevents it, and reports Windows root store state via `warden doctor`
+* Warden-issued TLS certificates now include local CRL/AIA metadata and publish revocation artifacts on `http://127.0.0.1/.warden/pki/` so Windows Schannel can validate local HTTPS services such as native DoH
+
+**Enhancements:**
+* Added optional DNS-over-HTTPS support for Windows / WSL workflows via `WARDEN_DNS_OVER_HTTPS_ENABLE=1`, serving `https://doh.<service-domain>/dns-query` with `https://dnsmasq.<service-domain>/dns-query` preserved as a compatibility alias
 
 ## Version [0.16.0](https://github.com/wardenenv/warden/tree/0.16.0) (2026-02-12)
 

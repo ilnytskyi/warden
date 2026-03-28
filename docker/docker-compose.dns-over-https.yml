@@ -1,0 +1,27 @@
+services:
+  dns-over-https:
+    container_name: dns-over-https
+    image: powerdns/dnsdist-19@sha256:720091e8702abcc863a1ad6fe8667c62f82797f33cd4924a2e49c57d5da5b451
+    depends_on:
+      - dnsmasq
+    environment:
+      WARDEN_DNS_OVER_HTTPS_UPSTREAM_HOST: dnsmasq
+      WARDEN_DNS_OVER_HTTPS_CONFIG: |-
+        -- Only accept traffic from localhost and RFC1918 ranges. Traefik reaches this service over the Docker bridge network.
+        setACL({"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"})
+
+        newServer({address="__WARDEN_DNS_OVER_HTTPS_UPSTREAM__:53"})
+        addDOHLocal("0.0.0.0:8053", nil, nil, {"/dns-query"})
+    volumes:
+      - ${WARDEN_SERVICE_DIR}/docker/dns-over-https/docker-entrypoint.sh:/usr/local/bin/warden-dns-over-https-entrypoint.sh:ro
+    entrypoint:
+      - /usr/local/bin/warden-dns-over-https-entrypoint.sh
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dns-over-https.tls=true
+      - traefik.http.routers.dns-over-https.priority=100
+      - traefik.http.routers.dns-over-https.rule=(Host(`doh.${WARDEN_SERVICE_DOMAIN:-warden.test}`) || Host(`dnsmasq.${WARDEN_SERVICE_DOMAIN:-warden.test}`)) && Path(`/dns-query`)
+      - traefik.http.routers.dns-over-https.service=dns-over-https
+      - traefik.http.services.dns-over-https.loadbalancer.server.port=8053
+      - traefik.http.services.dns-over-https.loadbalancer.server.scheme=h2c
+    restart: ${WARDEN_RESTART_POLICY:-always}
