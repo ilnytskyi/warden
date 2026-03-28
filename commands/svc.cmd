@@ -41,19 +41,22 @@ DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.pki.yml")
 
 ## add dnsmasq docker-compose
 WARDEN_DNSMASQ_ENABLE="${WARDEN_DNSMASQ_ENABLE:-1}"
+WARDEN_DNS_OVER_HTTPS_ENABLE="${WARDEN_DNS_OVER_HTTPS_ENABLE:-0}"
+if [[ "$WARDEN_DNS_OVER_HTTPS_ENABLE" == "1" ]]; then
+    if [[ "$WARDEN_DNSMASQ_ENABLE" != "1" ]]; then
+        warning "WARDEN_DNS_OVER_HTTPS_ENABLE requires dnsmasq; enabling Warden dnsmasq for this global services run"
+        WARDEN_DNSMASQ_ENABLE="1"
+    fi
+fi
+
 if [[ "$WARDEN_DNSMASQ_ENABLE" == "1" ]]; then
     DOCKER_COMPOSE_ARGS+=("-f")
     DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.dnsmasq.yml")
 fi
 
-WARDEN_DNS_OVER_HTTPS_ENABLE="${WARDEN_DNS_OVER_HTTPS_ENABLE:-0}"
 if [[ "$WARDEN_DNS_OVER_HTTPS_ENABLE" == "1" ]]; then
-    if [[ "$WARDEN_DNSMASQ_ENABLE" != "1" ]]; then
-        warning "WARDEN_DNS_OVER_HTTPS_ENABLE requires WARDEN_DNSMASQ_ENABLE=1; skipping DNS-over-HTTPS service"
-    else
-        DOCKER_COMPOSE_ARGS+=("-f")
-        DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.dns-over-https.yml")
-    fi
+    DOCKER_COMPOSE_ARGS+=("-f")
+    DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.dns-over-https.yml")
 fi
 
 WARDEN_PORTAINER_ENABLE="${WARDEN_PORTAINER_ENABLE:-0}"
