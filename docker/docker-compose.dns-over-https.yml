@@ -20,7 +20,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.dns-over-https.tls=true
       - traefik.http.routers.dns-over-https.priority=100
-      - traefik.http.routers.dns-over-https.rule=(Host(`doh.${WARDEN_SERVICE_DOMAIN:-warden.test}`) || Host(`dnsmasq.${WARDEN_SERVICE_DOMAIN:-warden.test}`)) && Path(`/dns-query`)
+      - traefik.http.routers.dns-over-https.rule=Host(`doh.${WARDEN_SERVICE_DOMAIN:-warden.test}`) && Path(`/dns-query`)
       - traefik.http.routers.dns-over-https.service=dns-over-https
       - traefik.http.services.dns-over-https.loadbalancer.server.port=8053
       - traefik.http.services.dns-over-https.loadbalancer.server.scheme=h2c
