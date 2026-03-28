@@ -11,7 +11,7 @@
 * Warden-issued TLS certificates now include local CRL/AIA metadata and publish revocation artifacts on `http://127.0.0.1/.warden/pki/` so Windows Schannel can validate local HTTPS services such as native DoH
 
 **Enhancements:**
-* Added optional DNS-over-HTTPS support for Windows / WSL workflows via `WARDEN_DNS_OVER_HTTPS_ENABLE=1`, serving `https://doh.<service-domain>/dns-query`
+* Added optional DNS-over-HTTPS support for Windows / WSL workflows via `WARDEN_DNS_OVER_HTTPS_ENABLE=1`, serving `https://doh.warden.test/dns-query` by default
 * Enabling `WARDEN_DNS_OVER_HTTPS_ENABLE=1` now automatically keeps Warden `dnsmasq` enabled for the same global services run because the DoH bridge depends on the existing DNS resolver
 
 ## Version [0.16.0](https://github.com/wardenenv/warden/tree/0.16.0) (2026-02-12)
