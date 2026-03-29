@@ -29,8 +29,8 @@ services:
     environment:
       WARDEN_DNS_OVER_HTTPS_UPSTREAM_HOST: dnsmasq
       WARDEN_DNS_OVER_HTTPS_CONFIG: |-
-        -- Only accept traffic from localhost and RFC1918 ranges. Traefik reaches this service over the Docker bridge network.
-        setACL({"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"})
+        -- Accept any source that can already reach this local-dev service. Access control is handled by Docker networking and Traefik exposure.
+        setACL({"0.0.0.0/0", "::/0"})
 
         newServer({address="__WARDEN_DNS_OVER_HTTPS_UPSTREAM__:53"})
         addDOHLocal("0.0.0.0:8053", nil, nil, {"/dns-query"})
