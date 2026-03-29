@@ -18,7 +18,7 @@ function installSshConfig () {
 			Host tunnel.warden.test
 			HostName 127.0.0.1
 			User user
-			Port 2222fix
+			Port 2222
 			IdentityFile ~/.warden/tunnel/ssh_key
 			## WARDEN END ##
 			EOT
