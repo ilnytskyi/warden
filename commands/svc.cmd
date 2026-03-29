@@ -137,7 +137,7 @@ if [[ "${WARDEN_PARAMS[0]}" == "up" ]]; then
 		    http-catchall-redirect:
 		      entryPoints:
 		        - http
-		      rule: HostRegexp(`{host:.+}`)
+		      rule: PathPrefix(`/`)
 		      middlewares:
 		        - http-redirect-to-https
 		      service: noop@internal

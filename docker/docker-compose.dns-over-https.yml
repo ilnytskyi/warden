@@ -11,6 +11,7 @@ services:
       - ${WARDEN_HOME_DIR}/etc/pki-public:/www:ro
     labels:
       - traefik.enable=true
+      # pki must be explicetly opt-in for plain http instead of https for proper revocation endpoint behavior
       - traefik.http.routers.dns-over-https-pki.rule=PathPrefix(`/.warden/pki/`)
       - traefik.http.routers.dns-over-https-pki.entrypoints=http
       - traefik.http.routers.dns-over-https-pki.priority=1000

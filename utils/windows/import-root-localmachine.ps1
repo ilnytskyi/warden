@@ -11,16 +11,31 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Test-AccessDeniedError {
+    param($ErrorRecord)
+
+    return (
+        $ErrorRecord.Exception.HResult -eq -2147024891 -or
+        $ErrorRecord.Exception.Message -match 'Access is denied'
+    )
+}
+
+function Test-PolicyBlockedError {
+    param($ErrorRecord)
+
+    return $ErrorRecord.Exception.Message -match 'group policy|policy|administrator has blocked|managed by your organization'
+}
+
 $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertificatePath)
 $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'LocalMachine')
 try {
     $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
 } catch [System.Security.Cryptography.CryptographicException] {
-    if ($_.Exception.Message -match 'Access is denied') {
+    if (Test-AccessDeniedError $_) {
         Set-Content -Path $StatusPath -Value 'access_denied' -NoNewline
         exit 1
     }
-    if ($_.Exception.Message -match 'group policy|policy|administrator has blocked|managed by your organization') {
+    if (Test-PolicyBlockedError $_) {
         Set-Content -Path $StatusPath -Value 'policy_blocked' -NoNewline
         exit 1
     }
@@ -47,7 +62,7 @@ try {
             }
         }
     } catch [System.Security.Cryptography.CryptographicException] {
-        if ($_.Exception.Message -match 'group policy|policy|administrator has blocked|managed by your organization') {
+        if (Test-PolicyBlockedError $_) {
             Set-Content -Path $StatusPath -Value 'policy_blocked' -NoNewline
         } else {
             Set-Content -Path $StatusPath -Value 'store_error' -NoNewline

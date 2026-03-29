@@ -63,60 +63,7 @@ then
 fi
 
 if hasWindowsCertificateBridge; then
-  echo "==> Trusting root certificate in Windows Root store"
-  if ! windows_trust_status="$(trustRootCaInWindows "${WARDEN_SSL_DIR}/rootca/certs/ca.cert.pem")"; then
-    warning "Unable to trust the Warden root certificate in Windows. Windows browsers may continue to warn until it is imported manually."
-    sendWindowsNotification "Warden Certificate" "Unable to trust the Warden root certificate in Windows. Manual import may still be required." "Error"
-  elif [[ "${windows_trust_status}" == "localmachine_present" ]]; then
-    echo "==> Root certificate already present in Windows LocalMachine Root store"
-  elif [[ "${windows_trust_status}" == "localmachine_imported" ]]; then
-    echo "==> Root certificate imported into Windows LocalMachine Root store"
-    sendWindowsNotification "Warden Certificate" "Warden root certificate installed in Windows LocalMachine Root." "Info"
-  elif [[ "${windows_trust_status}" == "localmachine_replaced" ]]; then
-    echo "==> Root certificate replaced in Windows LocalMachine Root store"
-    sendWindowsNotification "Warden Certificate" "Warden root certificate was rotated in Windows LocalMachine Root." "Info"
-  elif [[ "${windows_trust_status}" == "localmachine_imported_via_elevation" ]]; then
-    echo "==> Root certificate imported into Windows LocalMachine Root store after administrator approval"
-    sendWindowsNotification "Warden Certificate" "Warden root certificate installed in Windows LocalMachine Root after administrator approval." "Info"
-  elif [[ "${windows_trust_status}" == "localmachine_policy_blocked_present" ]]; then
-    warning "Windows policy may be preventing installation of the Warden root certificate into Windows LocalMachine Root. The certificate is already present in Windows CurrentUser Root store. Contact your administrator if Windows system services still reject the certificate."
-    sendWindowsNotification "Warden Certificate" "Windows policy may be preventing LocalMachine Root installation. The certificate is present in CurrentUser Root." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_policy_blocked_imported" ]]; then
-    warning "Windows policy may be preventing installation of the Warden root certificate into Windows LocalMachine Root. Imported into Windows CurrentUser Root store instead. Contact your administrator if Windows system services still reject the certificate."
-    sendWindowsNotification "Warden Certificate" "Windows policy may be preventing LocalMachine Root installation. The certificate was imported into CurrentUser Root instead." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_policy_blocked_replaced" ]]; then
-    warning "Windows policy may be preventing installation of the Warden root certificate into Windows LocalMachine Root. Replaced in Windows CurrentUser Root store instead. Contact your administrator if Windows system services still reject the certificate."
-    sendWindowsNotification "Warden Certificate" "Windows policy may be preventing LocalMachine Root installation. The certificate was rotated in CurrentUser Root instead." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_store_error_present" ]]; then
-    warning "Windows rejected installation of the Warden root certificate into Windows LocalMachine Root for a reason other than access denial. The certificate is already present in Windows CurrentUser Root store. Windows policy or endpoint security may be blocking this operation."
-    sendWindowsNotification "Warden Certificate" "Windows rejected LocalMachine Root installation. The certificate is present in CurrentUser Root." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_store_error_imported" ]]; then
-    warning "Windows rejected installation of the Warden root certificate into Windows LocalMachine Root for a reason other than access denial. Imported into Windows CurrentUser Root store instead. Windows policy or endpoint security may be blocking this operation."
-    sendWindowsNotification "Warden Certificate" "Windows rejected LocalMachine Root installation. The certificate was imported into CurrentUser Root instead." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_store_error_replaced" ]]; then
-    warning "Windows rejected installation of the Warden root certificate into Windows LocalMachine Root for a reason other than access denial. Replaced in Windows CurrentUser Root store instead. Windows policy or endpoint security may be blocking this operation."
-    sendWindowsNotification "Warden Certificate" "Windows rejected LocalMachine Root installation. The certificate was rotated in CurrentUser Root instead." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_elevation_cancelled_present" ]]; then
-    warning "Administrator approval was canceled while importing the Warden root certificate into Windows LocalMachine Root. The certificate is already present in Windows CurrentUser Root store."
-    sendWindowsNotification "Warden Certificate" "Administrator approval was canceled. The certificate is already present in Windows CurrentUser Root." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_elevation_cancelled_imported" ]]; then
-    warning "Administrator approval was canceled while importing the Warden root certificate into Windows LocalMachine Root. Imported into Windows CurrentUser Root store instead."
-    sendWindowsNotification "Warden Certificate" "Administrator approval was canceled. The certificate was imported into Windows CurrentUser Root instead." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_elevation_cancelled_replaced" ]]; then
-    warning "Administrator approval was canceled while importing the Warden root certificate into Windows LocalMachine Root. Replaced in Windows CurrentUser Root store instead."
-    sendWindowsNotification "Warden Certificate" "Administrator approval was canceled. The certificate was rotated in Windows CurrentUser Root instead." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_elevation_failed_present" ]]; then
-    warning "Administrator-approved import into Windows LocalMachine Root did not complete successfully. The certificate is already present in Windows CurrentUser Root store."
-    sendWindowsNotification "Warden Certificate" "Administrator-approved import into Windows LocalMachine Root did not complete. The certificate is already present in Windows CurrentUser Root." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_elevation_failed_imported" ]]; then
-    warning "Administrator-approved import into Windows LocalMachine Root did not complete successfully. Imported into Windows CurrentUser Root store instead."
-    sendWindowsNotification "Warden Certificate" "Administrator-approved import into Windows LocalMachine Root did not complete. The certificate was imported into Windows CurrentUser Root instead." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_elevation_failed_replaced" ]]; then
-    warning "Administrator-approved import into Windows LocalMachine Root did not complete successfully. Replaced in Windows CurrentUser Root store instead."
-    sendWindowsNotification "Warden Certificate" "Administrator-approved import into Windows LocalMachine Root did not complete. The certificate was rotated in Windows CurrentUser Root instead." "Warning"
-  elif [[ "${windows_trust_status}" == "localmachine_policy_blocked_unreadable" ]] || [[ "${windows_trust_status}" == "localmachine_store_error_unreadable" ]]; then
-    warning "Windows policy or endpoint security may be preventing Warden from checking or updating Windows CurrentUser Root after the LocalMachine Root install was blocked."
-  fi
+  installWindowsRootCa "${WARDEN_SSL_DIR}/rootca/certs/ca.cert.pem"
 fi
 
 ## configure resolver for .test domains on Mac OS only as Linux lacks support
