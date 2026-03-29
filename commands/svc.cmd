@@ -128,9 +128,9 @@ if [[ "${WARDEN_PARAMS[0]}" == "up" ]]; then
         cp "${WARDEN_SSL_DIR}/rootca/crl/ca.crl.pem" "${WARDEN_HOME_DIR}/etc/pki-public/ca.crl.pem"
     fi
 
-    # Keep normal HTTP->HTTPS redirects in dynamic config so `/.warden/pki/`
-    # can remain opt-in plain HTTP for DoH clients that require working
-    # CRL/AIA retrieval during TLS validation.
+    # Keep normal HTTP->HTTPS redirects in dynamic config so specific paths
+    # such as `/.warden/pki/` can remain opt-in plain HTTP when required
+    # for TLS validation metadata retrieval.
     cat >> "${WARDEN_HOME_DIR}/etc/traefik/dynamic.yml" <<-'EOT'
 		http:
 		  routers:
