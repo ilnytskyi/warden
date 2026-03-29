@@ -54,8 +54,6 @@ fi
 
 if [[ "$WARDEN_DNS_OVER_HTTPS_ENABLE" == "1" ]]; then
     DOCKER_COMPOSE_ARGS+=("-f")
-    DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.dns-over-https-pki.yml")
-    DOCKER_COMPOSE_ARGS+=("-f")
     DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.dns-over-https.yml")
 fi
 
