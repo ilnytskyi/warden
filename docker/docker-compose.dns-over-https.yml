@@ -22,7 +22,7 @@ services:
 
   dns-over-https:
     container_name: dns-over-https
-    image: powerdns/dnsdist-19@sha256:720091e8702abcc863a1ad6fe8667c62f82797f33cd4924a2e49c57d5da5b451
+    image: powerdns/dnsdist-19:1.9.11
     depends_on:
       - dnsmasq
     environment:
