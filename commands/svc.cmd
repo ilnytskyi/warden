@@ -36,8 +36,6 @@ fi
 export WARDEN_DOCKER_SOCK="${WARDEN_DOCKER_SOCK:-/var/run/docker.sock}"
 DOCKER_COMPOSE_ARGS+=("-f")
 DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.mailpit.yml")
-DOCKER_COMPOSE_ARGS+=("-f")
-DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.pki.yml")
 
 ## add dnsmasq docker-compose
 WARDEN_DNSMASQ_ENABLE="${WARDEN_DNSMASQ_ENABLE:-1}"
@@ -55,6 +53,8 @@ if [[ "$WARDEN_DNSMASQ_ENABLE" == "1" ]]; then
 fi
 
 if [[ "$WARDEN_DNS_OVER_HTTPS_ENABLE" == "1" ]]; then
+    DOCKER_COMPOSE_ARGS+=("-f")
+    DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.dns-over-https-pki.yml")
     DOCKER_COMPOSE_ARGS+=("-f")
     DOCKER_COMPOSE_ARGS+=("${WARDEN_DIR}/docker/docker-compose.dns-over-https.yml")
 fi
@@ -124,22 +124,24 @@ if [[ "${WARDEN_PARAMS[0]}" == "up" ]]; then
 		EOF
     done
 
-    mkdir -p "${WARDEN_HOME_DIR}/etc/pki-public"
-    cp "${WARDEN_SSL_DIR}/rootca/certs/ca.cert.pem" "${WARDEN_HOME_DIR}/etc/pki-public/ca.cert.pem"
-    cp "${WARDEN_SSL_DIR}/rootca/crl/ca.crl.pem" "${WARDEN_HOME_DIR}/etc/pki-public/ca.crl.pem"
+    if [[ "$WARDEN_DNS_OVER_HTTPS_ENABLE" == "1" ]]; then
+        mkdir -p "${WARDEN_HOME_DIR}/etc/pki-public"
+        cp "${WARDEN_SSL_DIR}/rootca/certs/ca.cert.pem" "${WARDEN_HOME_DIR}/etc/pki-public/ca.cert.pem"
+        cp "${WARDEN_SSL_DIR}/rootca/crl/ca.crl.pem" "${WARDEN_HOME_DIR}/etc/pki-public/ca.crl.pem"
+    fi
 
     cat >> "${WARDEN_HOME_DIR}/etc/traefik/dynamic.yml" <<-'EOT'
 		http:
 		  routers:
-		    http-to-https:
+		    http-catchall-redirect:
 		      entryPoints:
 		        - http
 		      rule: HostRegexp(`{host:.+}`)
 		      middlewares:
-		        - redirect-to-https
+		        - http-redirect-to-https
 		      service: noop@internal
 		  middlewares:
-		    redirect-to-https:
+		    http-redirect-to-https:
 		      redirectScheme:
 		        scheme: https
 		        permanent: true

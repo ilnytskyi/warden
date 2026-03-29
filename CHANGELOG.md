@@ -13,6 +13,7 @@
 **Enhancements:**
 * Added optional DNS-over-HTTPS support for Windows / WSL workflows via `WARDEN_DNS_OVER_HTTPS_ENABLE=1`, serving `https://doh.warden.test/dns-query` by default
 * Enabling `WARDEN_DNS_OVER_HTTPS_ENABLE=1` now automatically keeps Warden `dnsmasq` enabled for the same global services run because the DoH bridge depends on the existing DNS resolver
+* Enabling `WARDEN_DNS_OVER_HTTPS_ENABLE=1` now starts a `dns-over-https-pki` sidecar that publishes the local CRL/AIA files Windows Schannel uses, without keeping that HTTP publisher active when DoH is disabled
 
 ## Version [0.16.0](https://github.com/wardenenv/warden/tree/0.16.0) (2026-02-12)
 
