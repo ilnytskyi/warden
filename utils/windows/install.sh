@@ -3,6 +3,9 @@
 
 # WSL/Windows bridge helpers used by install and doctor flows.
 
+WINDOWS_MANAGED_HOSTS_BLOCK_START="# WARDEN WINDOWS HOSTS START"
+WINDOWS_MANAGED_HOSTS_BLOCK_END="# WARDEN WINDOWS HOSTS END"
+
 function isWsl () {
   [[ -n "${WSL_DISTRO_NAME:-}" ]] && return 0
   [[ -r /proc/sys/kernel/osrelease ]] && grep -qiE '(microsoft|wsl)' /proc/sys/kernel/osrelease && return 0
@@ -39,6 +42,23 @@ function sendWindowsNotification () {
     -Level "${level}" >/dev/null 2>&1 || true
 }
 
+function getWindowsStatusValue () {
+  local status_output="${1}"
+  local key="${2}"
+
+  printf '%s\n' "${status_output}" | sed -n "s/^${key}=//p" | head -n 1
+}
+
+function getWindowsGlobalHostsEntries () {
+  local service_domain="${1}"
+
+  printf '%s\n' \
+    "127.0.0.1 traefik.${service_domain}" \
+    "127.0.0.1 dnsmasq.${service_domain}" \
+    "127.0.0.1 doh.${service_domain}" \
+    "127.0.0.1 webmail.${service_domain}"
+}
+
 function getWindowsCertificateThumbprint () {
   local cert_path="${1}"
   local windows_cert_path thumbprint
@@ -65,6 +85,44 @@ function getWindowsRootCaStoreState () {
   echo "${store_state}"
 }
 
+function getWindowsDohTemplateState () {
+  local service_domain="${1}"
+  local state_output
+  local script_path
+
+  script_path="$(toWindowsPath "${WARDEN_DIR}/utils/windows/get-doh-template-state.ps1")" || return 1
+  state_output="$(runWindowsPowerShellScript "${script_path}" \
+    -ServerAddress "127.0.0.1" \
+    -DohTemplate "https://doh.${service_domain}/dns-query" \
+    -AllowFallbackToUdp 0 \
+    -AutoUpgrade 1)" || return 1
+  [[ -n "${state_output}" ]] || return 1
+
+  echo "${state_output}"
+}
+
+function getWindowsManagedHostsState () {
+  local service_domain="${1}"
+  local script_path state_output
+  local host_entries=()
+  local host_entries_text
+
+  while IFS= read -r entry; do
+    host_entries+=("${entry}")
+  done < <(getWindowsGlobalHostsEntries "${service_domain}")
+  host_entries_text="$(printf '%s|' "${host_entries[@]}")"
+  host_entries_text="${host_entries_text%|}"
+
+  script_path="$(toWindowsPath "${WARDEN_DIR}/utils/windows/get-managed-hosts-state.ps1")" || return 1
+  state_output="$(runWindowsPowerShellScript "${script_path}" \
+    -BlockStart "${WINDOWS_MANAGED_HOSTS_BLOCK_START}" \
+    -BlockEnd "${WINDOWS_MANAGED_HOSTS_BLOCK_END}" \
+    -EntriesText "${host_entries_text}")" || return 1
+  [[ -n "${state_output}" ]] || return 1
+
+  echo "${state_output}"
+}
+
 function trustRootCaInWindowsStore () {
   local cert_path="${1}"
   local store_location="${2}"
@@ -78,6 +136,94 @@ function trustRootCaInWindowsStore () {
   [[ "${trust_status}" =~ ^(present|imported|replaced|access_denied|policy_blocked|store_error)$ ]] || return 1
 
   echo "${trust_status}"
+}
+
+function installWindowsDohTemplate () {
+  local service_domain="${1}"
+  local state_output state script_path install_status
+
+  state_output="$(getWindowsDohTemplateState "${service_domain}")" || return 1
+  state="$(getWindowsStatusValue "${state_output}" "State")"
+
+  if [[ "${state}" == "present" ]]; then
+    echo "==> Windows DoH template already registered for 127.0.0.1"
+    return 0
+  fi
+
+  echo "==> Registering Windows DoH template for 127.0.0.1"
+  script_path="$(toWindowsPath "${WARDEN_DIR}/utils/windows/install-doh-template-elevated.ps1")" || return 1
+  install_status="$(runWindowsPowerShellScript "${script_path}" \
+    -ServerAddress "127.0.0.1" \
+    -DohTemplate "https://doh.${service_domain}/dns-query" \
+    -AllowFallbackToUdp 0 \
+    -AutoUpgrade 1)" || return 1
+
+  case "${install_status}" in
+    installed)
+      echo "==> Windows DoH template registered for 127.0.0.1"
+      ;;
+    updated)
+      echo "==> Windows DoH template updated for 127.0.0.1"
+      ;;
+    elevation_cancelled)
+      warning "Administrator approval was canceled while registering the Warden Windows DoH template."
+      ;;
+    elevation_failed)
+      warning "Unable to register the Warden Windows DoH template automatically."
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+function installWindowsGlobalHosts () {
+  local service_domain="${1}"
+  local state_output state script_path install_status
+  local host_entries=()
+  local host_entries_text
+
+  state_output="$(getWindowsManagedHostsState "${service_domain}")" || return 1
+  state="$(getWindowsStatusValue "${state_output}" "State")"
+
+  if [[ "${state}" == "present" ]]; then
+    echo "==> Windows hosts entries already present for Warden global services"
+    return 0
+  fi
+
+  while IFS= read -r entry; do
+    host_entries+=("${entry}")
+  done < <(getWindowsGlobalHostsEntries "${service_domain}")
+  host_entries_text="$(printf '%s|' "${host_entries[@]}")"
+  host_entries_text="${host_entries_text%|}"
+
+  echo "==> Installing Windows hosts entries for Warden global services"
+  script_path="$(toWindowsPath "${WARDEN_DIR}/utils/windows/install-managed-hosts-elevated.ps1")" || return 1
+  install_status="$(runWindowsPowerShellScript "${script_path}" \
+    -BlockStart "${WINDOWS_MANAGED_HOSTS_BLOCK_START}" \
+    -BlockEnd "${WINDOWS_MANAGED_HOSTS_BLOCK_END}" \
+    -EntriesText "${host_entries_text}")" || return 1
+
+  case "${install_status}" in
+    installed)
+      echo "==> Windows hosts entries installed for Warden global services"
+      ;;
+    updated)
+      echo "==> Windows hosts entries updated for Warden global services"
+      ;;
+    present)
+      echo "==> Windows hosts entries already present for Warden global services"
+      ;;
+    elevation_cancelled)
+      warning "Administrator approval was canceled while updating the Windows hosts file for Warden."
+      ;;
+    elevation_failed)
+      warning "Unable to update the Windows hosts file for Warden automatically."
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 function trustRootCaInWindowsLocalMachineElevated () {

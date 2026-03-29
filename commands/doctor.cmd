@@ -46,6 +46,11 @@ cat ${WARDEN_HOME_DIR}/.env
 echo
 
 if hasWindowsCertificateBridge; then
+    if [[ -f "${WARDEN_HOME_DIR}/.env" ]]; then
+        eval "$(grep "^WARDEN_SERVICE_DOMAIN" "${WARDEN_HOME_DIR}/.env")"
+    fi
+    WARDEN_SERVICE_DOMAIN="${WARDEN_SERVICE_DOMAIN:-warden.test}"
+
     echo -e "\033[32mWindows Warden root certificate store state:\033[0m"
     windows_store_state="$(getWindowsRootCaStoreState "${WARDEN_HOME_DIR}/ssl/rootca/certs/ca.cert.pem")"
     case "${windows_store_state}" in
@@ -58,6 +63,24 @@ if hasWindowsCertificateBridge; then
         *"CurrentUser=missing"* ) echo -e "\033[33mWindows CurrentUser Root: missing\033[0m" ;;
         *"CurrentUser=unreadable"* ) echo -e "\033[33mWindows CurrentUser Root: unreadable\033[0m" ;;
     esac
+
+    windows_doh_state="$(getWindowsDohTemplateState "${WARDEN_SERVICE_DOMAIN}")"
+    case "$(getWindowsStatusValue "${windows_doh_state}" "State")" in
+        present ) echo -e "\033[33mWindows DoH for 127.0.0.1: present ($(getWindowsStatusValue "${windows_doh_state}" "Template"))\033[0m" ;;
+        different ) echo -e "\033[33mWindows DoH for 127.0.0.1: differs ($(getWindowsStatusValue "${windows_doh_state}" "Template"))\033[0m" ;;
+        missing ) echo -e "\033[33mWindows DoH for 127.0.0.1: missing\033[0m" ;;
+    esac
+
+    windows_hosts_state="$(getWindowsManagedHostsState "${WARDEN_SERVICE_DOMAIN}")"
+    case "$(getWindowsStatusValue "${windows_hosts_state}" "State")" in
+        present ) echo -e "\033[33mWindows Warden hosts block: present\033[0m" ;;
+        different ) echo -e "\033[33mWindows Warden hosts block: differs\033[0m" ;;
+        missing ) echo -e "\033[33mWindows Warden hosts block: missing\033[0m" ;;
+    esac
+    windows_hosts_entries="$(getWindowsStatusValue "${windows_hosts_state}" "Entries")"
+    if [[ -n "${windows_hosts_entries}" ]]; then
+        echo -e "\033[33mWindows Warden hosts entries: ${windows_hosts_entries//|/, }\033[0m"
+    fi
     echo
 fi
 

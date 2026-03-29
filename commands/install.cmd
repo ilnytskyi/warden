@@ -36,6 +36,11 @@ if [[ ! -f "${WARDEN_SSL_DIR}/rootca/crl/ca.crl.pem" ]]; then
     -out "${WARDEN_SSL_DIR}/rootca/crl/ca.crl.pem"
 fi
 
+if [[ -f "${WARDEN_HOME_DIR}/.env" ]]; then
+  eval "$(grep "^WARDEN_SERVICE_DOMAIN" "${WARDEN_HOME_DIR}/.env")"
+fi
+WARDEN_SERVICE_DOMAIN="${WARDEN_SERVICE_DOMAIN:-warden.test}"
+
 ## trust root ca differently on Fedora, Ubuntu and macOS
 if [[ "$OSTYPE" =~ ^linux ]] \
   && [[ -d /etc/pki/ca-trust/source/anchors ]] \
@@ -64,6 +69,8 @@ fi
 
 if hasWindowsCertificateBridge; then
   installWindowsRootCa "${WARDEN_SSL_DIR}/rootca/certs/ca.cert.pem"
+  installWindowsDohTemplate "${WARDEN_SERVICE_DOMAIN}"
+  installWindowsGlobalHosts "${WARDEN_SERVICE_DOMAIN}"
 fi
 
 ## configure resolver for .test domains on Mac OS only as Linux lacks support
