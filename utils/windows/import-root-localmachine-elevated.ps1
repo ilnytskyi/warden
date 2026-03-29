@@ -1,3 +1,7 @@
+#
+# Handles UAC elevation for LocalMachine\Root import, passes work to the
+# elevated import script, and translates the result back to WSL.
+#
 param(
     [Parameter(Mandatory = $true)]
     [string]$CertificatePath,

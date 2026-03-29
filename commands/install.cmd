@@ -67,7 +67,7 @@ then
     -k /Library/Keychains/System.keychain "${WARDEN_SSL_DIR}/rootca/certs/ca.cert.pem"
 fi
 
-if hasWindowsCertificateBridge; then
+if hasWindowsBridge; then
   installWindowsRootCa "${WARDEN_SSL_DIR}/rootca/certs/ca.cert.pem"
   installWindowsDohTemplate "${WARDEN_SERVICE_DOMAIN}"
   installWindowsGlobalHosts "${WARDEN_SERVICE_DOMAIN}"

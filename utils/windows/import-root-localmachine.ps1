@@ -1,3 +1,7 @@
+#
+# Performs the actual LocalMachine\Root import and writes a status token for
+# the caller. This script is intended to run inside the elevated process.
+#
 param(
     [Parameter(Mandatory = $true)]
     [string]$CertificatePath,

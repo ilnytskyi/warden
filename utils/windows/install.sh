@@ -7,13 +7,15 @@ WINDOWS_MANAGED_HOSTS_BLOCK_START="# WARDEN WINDOWS HOSTS START"
 WINDOWS_MANAGED_HOSTS_BLOCK_END="# WARDEN WINDOWS HOSTS END"
 
 function isWsl () {
-  [[ -n "${WSL_DISTRO_NAME:-}" ]] && return 0
-  [[ -r /proc/sys/kernel/osrelease ]] && grep -qiE '(microsoft|wsl)' /proc/sys/kernel/osrelease && return 0
-  [[ -r /proc/version ]] && grep -qiE '(microsoft|wsl)' /proc/version && return 0
+  command -v wslpath >/dev/null 2>&1 || return 1
+
+  [[ -n "${WSL_DISTRO_NAME:-}" ]] && wslpath -w . >/dev/null 2>&1 && return 0
+  [[ -r /proc/sys/kernel/osrelease ]] && grep -qiE '(microsoft|wsl)' /proc/sys/kernel/osrelease && wslpath -w . >/dev/null 2>&1 && return 0
+  [[ -r /proc/version ]] && grep -qiE '(microsoft|wsl)' /proc/version && wslpath -w . >/dev/null 2>&1 && return 0
   return 1
 }
 
-function hasWindowsCertificateBridge () {
+function hasWindowsBridge () {
   isWsl && command -v powershell.exe >/dev/null 2>&1
 }
 
@@ -33,7 +35,7 @@ function sendWindowsNotification () {
   local message="${2}"
   local level="${3:-Info}"
 
-  hasWindowsCertificateBridge || return 0
+  hasWindowsBridge || return 0
 
   powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden \
     -File "$(toWindowsPath "${WARDEN_DIR}/utils/windows/show-notification.ps1")" \
@@ -123,6 +125,17 @@ function getWindowsManagedHostsState () {
   echo "${state_output}"
 }
 
+function probeWindowsDnsResolution () {
+  local hostname="${1}"
+  local script_path state_output
+
+  script_path="$(toWindowsPath "${WARDEN_DIR}/utils/windows/test-dns-resolution.ps1")" || return 1
+  state_output="$(runWindowsPowerShellScript "${script_path}" -Hostname "${hostname}")" || return 1
+  [[ -n "${state_output}" ]] || return 1
+
+  echo "${state_output}"
+}
+
 function trustRootCaInWindowsStore () {
   local cert_path="${1}"
   local store_location="${2}"
@@ -147,6 +160,7 @@ function installWindowsDohTemplate () {
 
   if [[ "${state}" == "present" ]]; then
     echo "==> Windows DoH template already registered for 127.0.0.1"
+    sendWindowsNotification "Warden DoH" "Windows DNS over HTTPS is already registered for 127.0.0.1." "Info"
     return 0
   fi
 
@@ -161,15 +175,19 @@ function installWindowsDohTemplate () {
   case "${install_status}" in
     installed)
       echo "==> Windows DoH template registered for 127.0.0.1"
+      sendWindowsNotification "Warden DoH" "Windows DNS over HTTPS was registered for 127.0.0.1." "Info"
       ;;
     updated)
       echo "==> Windows DoH template updated for 127.0.0.1"
+      sendWindowsNotification "Warden DoH" "Windows DNS over HTTPS was updated for 127.0.0.1." "Info"
       ;;
     elevation_cancelled)
       warning "Administrator approval was canceled while registering the Warden Windows DoH template."
+      sendWindowsNotification "Warden DoH" "Administrator approval was canceled while registering Windows DNS over HTTPS." "Warning"
       ;;
     elevation_failed)
       warning "Unable to register the Warden Windows DoH template automatically."
+      sendWindowsNotification "Warden DoH" "Unable to register Windows DNS over HTTPS automatically." "Warning"
       ;;
     *)
       return 1
@@ -188,6 +206,7 @@ function installWindowsGlobalHosts () {
 
   if [[ "${state}" == "present" ]]; then
     echo "==> Windows hosts entries already present for Warden global services"
+    sendWindowsNotification "Warden Hosts" "Windows hosts entries are already present for Warden global services." "Info"
     return 0
   fi
 
@@ -207,18 +226,23 @@ function installWindowsGlobalHosts () {
   case "${install_status}" in
     installed)
       echo "==> Windows hosts entries installed for Warden global services"
+      sendWindowsNotification "Warden Hosts" "Windows hosts entries were installed for Warden global services." "Info"
       ;;
     updated)
       echo "==> Windows hosts entries updated for Warden global services"
+      sendWindowsNotification "Warden Hosts" "Windows hosts entries were updated for Warden global services." "Info"
       ;;
     present)
       echo "==> Windows hosts entries already present for Warden global services"
+      sendWindowsNotification "Warden Hosts" "Windows hosts entries are already present for Warden global services." "Info"
       ;;
     elevation_cancelled)
       warning "Administrator approval was canceled while updating the Windows hosts file for Warden."
+      sendWindowsNotification "Warden Hosts" "Administrator approval was canceled while updating the Windows hosts file for Warden." "Warning"
       ;;
     elevation_failed)
       warning "Unable to update the Windows hosts file for Warden automatically."
+      sendWindowsNotification "Warden Hosts" "Unable to update the Windows hosts file for Warden automatically." "Warning"
       ;;
     *)
       return 1
