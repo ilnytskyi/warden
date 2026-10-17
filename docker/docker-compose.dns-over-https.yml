@@ -20,8 +20,8 @@ services:
       - /usr/local/bin/warden-dns-over-https-entrypoint.sh
     labels:
       - traefik.enable=true
-      # PKI must be explicitly routed over plain HTTP for certificate revocation checks.
-      - traefik.http.routers.dns-over-https-pki.rule=PathPrefix(`/.warden/pki/`)
+      # CRL/AIA clients cannot authenticate; expose only these two files over HTTP.
+      - traefik.http.routers.dns-over-https-pki.rule=Path(`/.warden/pki/ca.cert.pem`) || Path(`/.warden/pki/ca.crl.pem`)
       - traefik.http.routers.dns-over-https-pki.entrypoints=http
       - traefik.http.routers.dns-over-https-pki.priority=1000
       - traefik.http.routers.dns-over-https-pki.service=dns-over-https-pki

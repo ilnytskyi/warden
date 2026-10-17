@@ -16,10 +16,13 @@ printf '%s\n' "${WARDEN_DNS_OVER_HTTPS_CONFIG}" \
 
 cat >> /tmp/warden-dnsdist.conf <<EOF
 webserver("0.0.0.0:8083")
+# CRL/AIA clients cannot authenticate. Traefik exposes only the two exact PKI
+# paths below, keeping the rest of dnsdist's webserver off the public routes.
 setWebserverConfig({
   acl="0.0.0.0/0,::/0",
-  password="${webserver_secret}",
-  apiKey="${webserver_secret}"
+  apiKey=hashPassword("${webserver_secret}"),
+  dashboardRequiresAuthentication=false,
+  statsRequireAuthentication=false
 })
 EOF
 
