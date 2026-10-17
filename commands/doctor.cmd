@@ -45,10 +45,23 @@ echo -e "\033[32mWarden global .env:\033[0m"
 cat ${WARDEN_HOME_DIR}/.env
 echo
 
-if [[ -f "${WARDEN_HOME_DIR}/.env" ]]; then
-    eval "$(grep "^WARDEN_SERVICE_DOMAIN" "${WARDEN_HOME_DIR}/.env")"
-    eval "$(grep "^WARDEN_DNS_OVER_HTTPS_ENABLE" "${WARDEN_HOME_DIR}/.env")"
+echo -e "\033[32mTraefik version in use:\033[0m"
+docker container inspect traefik --format '{{ .Config.Image }} ({{ .State.Status }})' 2>/dev/null \
+    || echo "traefik container is not present"
+echo
+
+echo -e "\033[32mTraefik static configuration:\033[0m"
+if [[ ! -f "${WARDEN_HOME_DIR}/etc/traefik/traefik.yml" ]]; then
+    echo "not present; run 'warden svc up'"
+elif cmp -s "${WARDEN_DIR}/config/traefik/traefik.yml" "${WARDEN_HOME_DIR}/etc/traefik/traefik.yml"; then
+    echo "in sync with ${WARDEN_DIR}/config/traefik/traefik.yml"
+else
+    echo "differs from ${WARDEN_DIR}/config/traefik/traefik.yml (shipped < | > in use):"
+    diff "${WARDEN_DIR}/config/traefik/traefik.yml" "${WARDEN_HOME_DIR}/etc/traefik/traefik.yml"
 fi
+echo
+
+loadEnvFile "${WARDEN_HOME_DIR}/.env" "(WARDEN_SERVICE_DOMAIN|WARDEN_DNS_OVER_HTTPS_ENABLE)$"
 WARDEN_SERVICE_DOMAIN="${WARDEN_SERVICE_DOMAIN:-warden.test}"
 WARDEN_DNS_OVER_HTTPS_ENABLE="${WARDEN_DNS_OVER_HTTPS_ENABLE:-0}"
 
