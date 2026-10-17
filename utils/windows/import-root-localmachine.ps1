@@ -31,6 +31,11 @@ function Test-PolicyBlockedError {
 }
 
 $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertificatePath)
+if ($cert.Thumbprint -ne $Thumbprint) {
+    Set-Content -Path $StatusPath -Value 'certificate_mismatch' -NoNewline
+    exit 1
+}
+
 $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'LocalMachine')
 try {
     $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
