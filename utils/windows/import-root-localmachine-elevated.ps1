@@ -63,6 +63,11 @@ try {
     }
 
     $status = Get-Content -Path $statusPath -Raw
+    if ($status -eq 'certificate_mismatch') {
+        Write-Output 'certificate_mismatch'
+        return
+    }
+
     if ($status -eq 'policy_blocked') {
         Write-Output 'policy_blocked'
         return

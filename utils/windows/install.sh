@@ -266,7 +266,7 @@ function trustRootCaInWindowsLocalMachineElevated () {
     -CertificatePath "${windows_cert_path}" \
     -Thumbprint "${cert_thumbprint}" \
     -ImportScriptPath "${import_script_path}")" || return 1
-  [[ "${elevate_status}" =~ ^(imported|elevation_cancelled|elevation_failed|policy_blocked)$ ]] || return 1
+  [[ "${elevate_status}" =~ ^(imported|elevation_cancelled|elevation_failed|policy_blocked|certificate_mismatch)$ ]] || return 1
 
   echo "${elevate_status}"
 }
@@ -368,6 +368,16 @@ function installWindowsRootCa () {
     localmachine_elevation_failed_replaced)
       warning "Administrator-approved import into Windows LocalMachine Root did not complete successfully. Replaced in Windows CurrentUser Root store instead."
       sendWindowsNotification "Warden Certificate" "Administrator-approved import into Windows LocalMachine Root did not complete. The certificate was rotated in Windows CurrentUser Root instead." "Warning"
+      ;;
+    localmachine_certificate_mismatch_present|localmachine_certificate_mismatch_imported|localmachine_certificate_mismatch_replaced)
+      local current_user_status="${windows_trust_status#localmachine_certificate_mismatch_}"
+      warning "Administrator-approved import was stopped because the staged certificate thumbprint did not match. No LocalMachine Root import was made; CurrentUser Root fallback status: ${current_user_status}. Check the Warden CA files and rerun 'warden install' if machine-wide trust is needed."
+      sendWindowsNotification "Warden Certificate" "The staged certificate thumbprint did not match, so no LocalMachine Root import was made. CurrentUser Root fallback status: ${current_user_status}." "Warning"
+      ;;
+    localmachine_certificate_mismatch_*)
+      local current_user_status="${windows_trust_status#localmachine_certificate_mismatch_}"
+      warning "Administrator-approved import was stopped because the staged certificate thumbprint did not match. No LocalMachine Root import was made, and CurrentUser fallback reported '${current_user_status}'. Check the Warden CA files and rerun 'warden install'; manual machine-wide import may be needed."
+      sendWindowsNotification "Warden Certificate" "The staged certificate thumbprint did not match. No LocalMachine Root import was made; CurrentUser fallback reported '${current_user_status}'." "Warning"
       ;;
     localmachine_policy_blocked_unreadable|localmachine_store_error_unreadable)
       warning "Windows policy or endpoint security may be preventing Warden from checking or updating Windows CurrentUser Root after the LocalMachine Root install was blocked."
