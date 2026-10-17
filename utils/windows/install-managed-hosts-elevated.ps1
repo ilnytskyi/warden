@@ -20,6 +20,7 @@ function Test-ElevationCancelledError {
     )
 }
 
+# Keep the idempotent elevated worker in Windows TEMP so RunAs avoids WSL interop and complex argument quoting.
 $statusPath = [System.IO.Path]::Combine($env:TEMP, 'warden-hosts-status-' + [guid]::NewGuid().ToString() + '.txt')
 $childPath = [System.IO.Path]::Combine($env:TEMP, 'warden-hosts-child-' + [guid]::NewGuid().ToString() + '.ps1')
 

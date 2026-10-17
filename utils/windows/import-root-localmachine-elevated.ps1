@@ -24,6 +24,7 @@ function Test-ElevationCancelledError {
     )
 }
 
+# Keep the elevated worker and certificate on Windows-local temp paths to avoid WSL interop and RunAs argument-quoting issues.
 $scriptPath = [System.IO.Path]::Combine($env:TEMP, 'Warden-Import-Root-Certificate-' + [guid]::NewGuid().ToString() + '.ps1')
 $statusPath = [System.IO.Path]::Combine($env:TEMP, 'warden-rootca-import-' + [guid]::NewGuid().ToString() + '.txt')
 $tempCertPath = [System.IO.Path]::Combine($env:TEMP, 'warden-rootca-' + [guid]::NewGuid().ToString() + '.pem')

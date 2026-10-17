@@ -23,6 +23,7 @@ function Test-ElevationCancelledError {
     )
 }
 
+# Keep the idempotent elevated worker in Windows TEMP so RunAs avoids WSL interop and complex argument quoting.
 $statusPath = [System.IO.Path]::Combine($env:TEMP, 'warden-doh-template-' + [guid]::NewGuid().ToString() + '.txt')
 $childPath = [System.IO.Path]::Combine($env:TEMP, 'warden-doh-template-child-' + [guid]::NewGuid().ToString() + '.ps1')
 $allowFallbackToUdpLiteral = if ([bool]$AllowFallbackToUdp) { '$true' } else { '$false' }
