@@ -91,9 +91,7 @@ fi
 if [[ "${WARDEN_PARAMS[0]}" == "up" ]]; then
 
     ## sign certificate used by global services (by default warden.test)
-    if [[ -f "${WARDEN_HOME_DIR}/.env" ]]; then
-        eval "$(grep "^WARDEN_SERVICE_DOMAIN" "${WARDEN_HOME_DIR}/.env")"
-    fi
+    loadEnvFile "${WARDEN_HOME_DIR}/.env" "WARDEN_SERVICE_DOMAIN$"
 
     WARDEN_SERVICE_DOMAIN="${WARDEN_SERVICE_DOMAIN:-warden.test}"
     if [[ ! -f "${WARDEN_SSL_DIR}/certs/${WARDEN_SERVICE_DOMAIN}.crt.pem" ]]; then

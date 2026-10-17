@@ -36,9 +36,7 @@ if [[ ! -f "${WARDEN_SSL_DIR}/rootca/crl/ca.crl.pem" ]]; then
     -out "${WARDEN_SSL_DIR}/rootca/crl/ca.crl.pem"
 fi
 
-if [[ -f "${WARDEN_HOME_DIR}/.env" ]]; then
-  eval "$(grep "^WARDEN_SERVICE_DOMAIN" "${WARDEN_HOME_DIR}/.env")"
-fi
+loadEnvFile "${WARDEN_HOME_DIR}/.env" "WARDEN_SERVICE_DOMAIN$"
 WARDEN_SERVICE_DOMAIN="${WARDEN_SERVICE_DOMAIN:-warden.test}"
 
 ## trust root ca differently on Fedora, Ubuntu and macOS
