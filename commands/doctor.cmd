@@ -237,6 +237,84 @@ function formatCertificateProbeResult() {
     esac
 }
 
+function getWslGenerateResolvConfSetting() {
+    [[ -r /etc/wsl.conf ]] || return 0
+
+    awk '
+        { line = tolower($0); sub(/\r$/, "", line); sub(/[[:space:]]*[#;].*$/, "", line) }
+        line ~ /^[[:space:]]*\[[[:space:]]*network[[:space:]]*\][[:space:]]*$/ { in_network = 1; next }
+        line ~ /^[[:space:]]*\[/ { in_network = 0; next }
+        in_network && line ~ /^[[:space:]]*generateresolvconf[[:space:]]*=/ {
+            sub(/^[^=]*=[[:space:]]*/, "", line)
+            gsub(/[[:space:]]/, "", line)
+            value = line
+        }
+        END { if (value != "") print value }
+    ' /etc/wsl.conf
+}
+
+if isWsl; then
+    echo -e "\033[32mWindows WSL diagnostics:\033[0m"
+
+    if command -v wslinfo >/dev/null 2>&1; then
+        wsl_version="$(wslinfo --wsl-version 2>/dev/null | tr -d '\r\n')"
+        wsl_networking_mode="$(wslinfo --networking-mode 2>/dev/null | tr -d '\r\n')"
+    else
+        wsl_version=""
+        wsl_networking_mode=""
+    fi
+
+    if [[ -n "${wsl_version}" ]]; then
+        echo -e "\033[33mWSL version: ${wsl_version}\033[0m"
+    else
+        echo -e "\033[33mWSL version: unavailable\033[0m"
+    fi
+
+    case "${wsl_networking_mode}" in
+        mirrored)
+            echo -e "\033[33mWSL networking mode: mirrored (recommended)\033[0m"
+            ;;
+        "")
+            echo -e "\033[33mWSL networking mode: unavailable (wslinfo is missing or could not query the active mode)\033[0m"
+            ;;
+        *)
+            echo -e "\033[33mWSL networking mode: ${wsl_networking_mode} (mirrored is recommended for localhost access and VPN compatibility)\033[0m"
+            ;;
+    esac
+
+    wsl_generate_resolv_conf="$(getWslGenerateResolvConfSetting)"
+    case "${wsl_generate_resolv_conf}" in
+        true|1)
+            echo -e "\033[33mWSL generateResolvConf: enabled\033[0m"
+            ;;
+        false|0)
+            echo -e "\033[33mWSL generateResolvConf: disabled (WSL DNS tunneling requires this setting enabled)\033[0m"
+            ;;
+        "")
+            echo -e "\033[33mWSL generateResolvConf: enabled by default (not explicitly set)\033[0m"
+            ;;
+        *)
+            echo -e "\033[33mWSL generateResolvConf: unrecognized value (${wsl_generate_resolv_conf})\033[0m"
+            ;;
+    esac
+
+    wsl_resolv_nameservers="$(awk '$1 == "nameserver" {print $2}' /etc/resolv.conf 2>/dev/null | paste -sd, -)"
+    if [[ -L /etc/resolv.conf ]]; then
+        echo -e "\033[33mWSL resolv.conf link: $(readlink /etc/resolv.conf)\033[0m"
+    elif [[ -f /etc/resolv.conf ]]; then
+        echo -e "\033[33mWSL resolv.conf link: regular file\033[0m"
+    else
+        echo -e "\033[33mWSL resolv.conf link: unavailable\033[0m"
+    fi
+
+    if [[ -n "${wsl_resolv_nameservers}" ]]; then
+        echo -e "\033[33mWSL resolv.conf nameserver(s): ${wsl_resolv_nameservers}\033[0m"
+    else
+        echo -e "\033[33mWSL resolv.conf nameserver(s): unavailable\033[0m"
+    fi
+    echo
+fi
+
 if hasWindowsBridge; then
     echo -e "\033[32mWindows Warden root certificate store state:\033[0m"
     windows_store_state="$(getWindowsRootCaStoreState "${WARDEN_HOME_DIR}/ssl/rootca/certs/ca.cert.pem")"
