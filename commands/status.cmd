@@ -14,7 +14,7 @@ while IFS=$'\t' read -r networkName environmentName; do
     if [[ "${networkName}" == "${wardenNetworkName}" ]]; then
         wardenNetworkFound=1
     elif [[ -n "${environmentName}" ]]; then
-        projectNetworks+=" ${networkName} "
+        projectNetworks+=" ${networkName}"
     fi
 done <<< "${networkList}"
 
@@ -25,7 +25,7 @@ fi
 ## One line per running Compose project: its default network name and working directory.
 runningProjectList=""
 if [[ -n "${projectNetworks}" ]]; then
-    runningProjectList=$(docker container ls --filter label=com.docker.compose.project.working_dir \
+    runningProjectList=$(set -o pipefail; docker container ls --filter label=com.docker.compose.project.working_dir \
         --format '{{.Label "com.docker.compose.project"}}_default{{"\t"}}{{.Label "com.docker.compose.project.working_dir"}}' \
         | LC_ALL=C sort -t $'\t' -u -k1,1)
 fi
@@ -33,7 +33,7 @@ fi
 messageList=()
 while IFS=$'\t' read -r projectNetwork projectDir; do
     # Skip Compose projects that are not Warden environments
-    [[ "${projectNetworks}" == *" ${projectNetwork} "* ]] || continue
+    [[ "${projectNetworks} " == *" ${projectNetwork} "* ]] || continue
 
     unset WARDEN_ENV_NAME WARDEN_ENV_TYPE TRAEFIK_DOMAIN TRAEFIK_SUBDOMAIN
     for envFile in "${projectDir}/.env" "${projectDir}/.env.local"; do
